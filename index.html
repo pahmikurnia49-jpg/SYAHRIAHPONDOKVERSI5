@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIPP - PP At-Taufiiqiyyah Bustanul Maarif</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root { --primary: #0f5132; --accent: #ffc107; --bg: #f4f6f9; }
+        body { background-color: var(--bg); font-family: 'Segoe UI', sans-serif; font-size: 0.9rem; }
+        
+        /* Layout */
+        .sidebar { width: 260px; background: var(--primary); color: white; min-height: 100vh; position: fixed; z-index: 1000; transition: 0.3s; }
+        .main-content { margin-left: 260px; padding: 20px; transition: 0.3s; }
+        
+        /* Nav */
+        .nav-link { color: rgba(255,255,255,0.8) !important; padding: 12px 20px; border-radius: 0 25px 25px 0; margin-bottom: 2px; cursor: pointer; display: flex; align-items: center; }
+        .nav-link:hover, .nav-link.active { background: var(--accent); color: #000 !important; font-weight: bold; }
+        .nav-link i { width: 25px; text-align: center; margin-right: 10px; }
+        
+        /* Components */
+        .card-stat { border: none; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: 0.2s; }
+        .card-stat:hover { transform: translateY(-2px); }
+        
+        /* Login Logo */
+        .login-logo { width: 80px; height: 80px; object-fit: contain; margin-bottom: 15px; }
+        .sidebar-logo { width: 50px; height: 50px; object-fit: contain; margin-bottom: 10px; background: white; border-radius: 50%; padding: 2px; }
+
+        /* Matrix Grid Laporan */
+        .grid-cell { width: 100%; height: 35px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: white; border-radius: 4px; font-weight: bold; margin: 1px 0; }
+        .bg-lunas { background: #198754; box-shadow: inset 0 0 5px rgba(0,0,0,0.2); } 
+        .bg-nyicil { background: #ffc107; color: black; box-shadow: inset 0 0 5px rgba(0,0,0,0.1); } 
+        .bg-belum { background: #dc3545; opacity: 0.8; } 
+        .bg-free { background: #6c757d; } 
+
+        @media (max-width: 768px) { .sidebar { margin-left: -260px; } .sidebar.active { margin-left: 0; } .main-content { margin-left: 0; } }
+    </style>
+</head>
+<body>
+
+    <div id="page-login" style="position:fixed; top:0; left:0; width:100%; height:100%; background:linear-gradient(135deg, #0f5132, #001f0e); z-index:9999; display:flex; align-items:center; justify-content:center;">
+        <div class="card p-4 text-center shadow-lg" style="width:100%; max-width:380px; border-radius:15px; border-top: 5px solid var(--accent);">
+            <img src="https://cdn-icons-png.flaticon.com/512/2232/2232688.png" class="login-logo mx-auto" alt="Logo Pondok">
+            
+            <h5 class="fw-bold text-success mb-0">SIPP LOGIN</h5>
+            <small class="text-muted d-block mb-4">PP At-Taufiiqiyyah Bustanul Maarif</small>
+            
+            <form id="formLogin">
+                <div class="form-floating mb-3 text-start">
+                    <input type="text" class="form-control" id="uName" placeholder="User" required>
+                    <label>Username</label>
+                </div>
+                <div class="form-floating mb-3 text-start">
+                    <input type="password" class="form-control" id="uPass" placeholder="Pass" required>
+                    <label>Password</label>
+                </div>
+                <button type="submit" class="btn btn-success w-100 fw-bold py-2 mb-3">MASUK APLIKASI</button>
+                <a href="#" onclick="lupaPass()" class="text-decoration-none small text-muted">Lupa Password?</a>
+            </form>
+        </div>
+    </div>
+
+    <div id="main-app" style="display:none;">
+        <div class="sidebar" id="sidebar">
+            <div class="p-4 text-center border-bottom border-white-50">
+                <img src="https://cdn-icons-png.flaticon.com/512/2232/2232688.png" class="sidebar-logo" alt="Logo">
+                <div class="fw-bold small lh-sm">PP AT-TAUFIIQIYYAH<br>BUSTANUL MAARIF</div>
+            </div>
+            <nav class="nav flex-column mt-3">
+                <a class="nav-link active" onclick="nav('dashboard')"><i class="fas fa-chart-line"></i> Dashboard</a>
+                <a class="nav-link" onclick="nav('santri')"><i class="fas fa-user-graduate"></i> Data Santri</a>
+                <a class="nav-link" onclick="nav('pembayaran')"><i class="fas fa-cash-register"></i> Pembayaran</a>
+                <a class="nav-link" onclick="nav('laporan')"><i class="fas fa-print"></i> Laporan</a>
+                <a class="nav-link" onclick="nav('pengaturan')"><i class="fas fa-cogs"></i> Pengaturan</a>
+                <a class="nav-link text-warning mt-4" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Keluar</a>
+            </nav>
+        </div>
+
+        <div class="main-content">
+            <button class="btn btn-success d-md-none mb-3 shadow" onclick="document.getElementById('sidebar').classList.toggle('active')"><i class="fas fa-bars"></i> Menu</button>
+
+            <div id="view-dashboard" class="view-section">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h4 class="fw-bold mb-0 text-success">Dashboard Keuangan</h4>
+                        <span class="badge bg-warning text-dark mt-1" id="dashPeriode">...</span>
+                    </div>
+                    <div class="text-end d-none d-md-block">
+                        <h4 id="jam" class="fw-bold text-dark mb-0">00:00</h4>
+                        <small id="tanggal" class="text-muted">-</small>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <div class="card card-stat p-3 h-100 border-start border-4 border-primary bg-white">
+                            <small class="text-muted fw-bold">TOTAL SANTRI AKTIF</small>
+                            <h3 class="mt-2 text-dark" id="dashJml">0</h3>
+                            <small class="text-muted" id="dashInfoBebas" style="font-size:11px">0 Bebas Syahriah</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card card-stat p-3 h-100 border-start border-4 border-info bg-white">
+                            <small class="text-muted fw-bold">TARGET BULAN INI</small>
+                            <h4 class="mt-2 text-primary" id="dashTarget">Rp 0</h4>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card card-stat p-3 h-100 border-start border-4 border-success bg-white">
+                            <small class="text-muted fw-bold">UANG MASUK (CASH)</small>
+                            <h4 class="mt-2 text-success" id="dashMasuk">Rp 0</h4>
+                            <div style="font-size:10px;" class="text-muted">Total penerimaan bulan ini</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card card-stat p-3 h-100 border-start border-4 border-danger bg-white">
+                            <small class="text-muted fw-bold">PIUTANG (BELUM MASUK)</small>
+                            <h4 class="mt-2 text-danger" id="dashKurang">Rp 0</h4>
+                            <small class="text-muted" style="font-size:10px">Kekurangan target bulan ini</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card card-stat p-3">
+                    <h6 class="fw-bold text-center mb-3">Grafik Cashflow Tahun Ini</h6>
+                    <div style="height: 300px;"><canvas id="chartRevenue"></canvas></div>
+                </div>
+            </div>
+
+            <div id="view-santri" class="view-section" style="display:none;">
+                <h4 class="fw-bold mb-3 text-success">Database Santri</h4>
+                
+                <div class="card card-stat p-3 mb-3">
+                    <div class="row g-2">
+                        <div class="col-md-4"><input type="file" id="fileExcel" class="form-control" accept=".xlsx"></div>
+                        <div class="col-md-2"><button onclick="importExcel()" class="btn btn-outline-success w-100"><i class="fas fa-file-excel"></i> Import</button></div>
+                        <div class="col-md-3"><button onclick="modalSantri()" class="btn btn-primary w-100"><i class="fas fa-plus"></i> Tambah Baru</button></div>
+                        <div class="col-md-3"><input type="text" id="cariSantri" class="form-control" placeholder="Cari nama..." onkeyup="renderSantri()"></div>
+                    </div>
+                </div>
+                <div class="table-responsive bg-white rounded p-3 shadow-sm">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light"><tr><th>No</th><th>Nama</th><th>L/P</th><th>Kelas</th><th>Status</th><th class="text-end">Aksi</th></tr></thead>
+                        <tbody id="tblSantri"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="view-pembayaran" class="view-section" style="display:none;">
+                <h4 class="fw-bold mb-3 text-success">Kasir Pembayaran</h4>
+                <div class="card card-stat p-4 mb-3 bg-white">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-3">
+                            <label class="small fw-bold text-muted">Bulan Tagihan</label>
+                            <select id="payBulan" class="form-select" onchange="renderBayar()">
+                                <option value="0">Januari</option><option value="1">Februari</option><option value="2">Maret</option>
+                                <option value="3">April</option><option value="4">Mei</option><option value="5">Juni</option>
+                                <option value="6">Juli</option><option value="7">Agustus</option><option value="8">September</option>
+                                <option value="9">Oktober</option><option value="10">November</option><option value="11">Desember</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="small fw-bold text-muted">Tahun</label>
+                            <select id="payTahun" class="form-select" onchange="renderBayar()"></select>
+                        </div>
+                        <div class="col-md-7">
+                            <label class="small fw-bold text-muted">Cari Santri</label>
+                            <input type="text" id="cariBayar" class="form-control" placeholder="Ketik nama santri..." onkeyup="renderBayar()">
+                        </div>
+                    </div>
+                </div>
+                <div class="table-responsive bg-white rounded p-3 shadow-sm">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light"><tr><th>Nama Santri</th><th>Kelas</th><th>Info Tunggakan</th><th>Status Bulan Ini</th><th>Kurang</th><th class="text-end">Aksi</th></tr></thead>
+                        <tbody id="tblBayar"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="view-laporan" class="view-section" style="display:none;">
+                <h4 class="fw-bold mb-4 text-success"><i class="fas fa-print"></i> Pusat Laporan</h4>
+                
+                <ul class="nav nav-tabs nav-justified mb-4" id="lapTabs">
+                    <li class="nav-item">
+                        <button class="nav-link active text-dark" data-bs-toggle="tab" data-bs-target="#tabMatriks">
+                            <i class="fas fa-th text-success"></i> KONTROL SANTRI & KARTU SPP
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link text-dark" data-bs-toggle="tab" data-bs-target="#tabPimpinan">
+                            <i class="fas fa-file-invoice-dollar text-primary"></i> LAPORAN PIMPINAN (PDF)
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="tabMatriks">
+                        <div class="card card-stat p-3 mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div class="d-flex gap-2">
+                                    <select id="gridTahun" class="form-select w-auto" onchange="renderGrid()"></select>
+                                    <input type="text" id="cariGrid" class="form-control" placeholder="Cari Nama..." onkeyup="renderGrid()">
+                                </div>
+                                <div class="small">
+                                    <span class="badge bg-lunas"><i class="fas fa-check"></i> Lunas</span>
+                                    <span class="badge bg-nyicil"><i class="fas fa-exclamation"></i> Nyicil</span>
+                                    <span class="badge bg-belum"><i class="fas fa-times"></i> Belum</span>
+                                </div>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-sm text-center align-middle" style="font-size:0.8rem">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th class="align-middle" style="width:200px;">Nama Santri</th>
+                                            <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th>
+                                            <th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th>
+                                            <th style="width:50px;">Kartu</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tblGrid"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="tabPimpinan">
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <div class="card card-stat p-4 h-100 border-start border-5 border-success">
+                                    <h5 class="fw-bold text-success"><i class="fas fa-calendar-alt"></i> Laporan Bulanan</h5>
+                                    <p class="text-muted small">Cetak laporan detail per bulan. Berisi rincian uang masuk, daftar santri yang menunggak, dan rekapitulasi petugas.</p>
+                                    <hr>
+                                    <div class="row g-2">
+                                        <div class="col-8">
+                                            <select id="lapBulan" class="form-select mb-2"></select>
+                                            <select id="lapTahun" class="form-select"></select>
+                                        </div>
+                                        <div class="col-4 d-flex align-items-end">
+                                            <button onclick="cetakLaporanBulanan()" class="btn btn-success w-100 h-100 fw-bold">
+                                                <i class="fas fa-download"></i> PDF
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="card card-stat p-4 h-100 border-start border-5 border-primary">
+                                    <h5 class="fw-bold text-primary"><i class="fas fa-chart-pie"></i> Laporan Tahunan</h5>
+                                    <p class="text-muted small">Cetak rekapitulasi omzet total selama satu tahun penuh (Januari s.d Desember). Ringkas dan padat untuk evaluasi pimpinan.</p>
+                                    <hr>
+                                    <div class="row g-2">
+                                        <div class="col-8">
+                                            <label class="small text-muted">Pilih Tahun Anggaran</label>
+                                            <select id="lapTahunFull" class="form-select"></select>
+                                        </div>
+                                        <div class="col-4 d-flex align-items-end">
+                                            <button onclick="cetakLaporanTahunan()" class="btn btn-primary w-100 fw-bold py-2">
+                                                <i class="fas fa-download"></i> PDF
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-pengaturan" class="view-section" style="display:none;">
+                <h4 class="fw-bold mb-3 text-success">Pengaturan Sistem</h4>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="card card-stat p-4">
+                            <h6 class="fw-bold border-bottom pb-2">Data Umum</h6>
+                            <label class="small mt-2">Nominal Syahriah (Rp)</label>
+                            <input type="number" id="confNominal" class="form-control mb-2">
+                            <label class="small">Kode Rahasia (Utk Lupa Password)</label>
+                            <input type="text" id="confSecret" class="form-control mb-2" placeholder="Contoh: admin123">
+                            <label class="small">Daftar Petugas (Pisah dengan koma)</label>
+                            <textarea id="confPetugas" class="form-control mb-3" rows="2"></textarea>
+                            <button onclick="saveConf('finance')" class="btn btn-primary btn-sm">Simpan Data</button>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card card-stat p-4">
+                            <h6 class="fw-bold border-bottom pb-2">Keamanan & Backup</h6>
+                            <div class="input-group input-group-sm mb-2"><span class="input-group-text">User</span><input type="text" id="confUser" class="form-control"></div>
+                            <div class="input-group input-group-sm mb-2"><span class="input-group-text">Pass</span><input type="text" id="confPass" class="form-control"></div>
+                            <button onclick="saveConf('account')" class="btn btn-warning btn-sm mb-4">Ganti Password</button>
+                            
+                            <h6 class="fw-bold border-bottom pb-2">Database</h6>
+                            <div class="d-flex gap-2 mt-2">
+                                <button onclick="downloadBackup()" class="btn btn-outline-dark btn-sm flex-fill"><i class="fas fa-download"></i> Backup</button>
+                                <button onclick="document.getElementById('fileRestore').click()" class="btn btn-outline-danger btn-sm flex-fill"><i class="fas fa-upload"></i> Restore</button>
+                            </div>
+                            <input type="file" id="fileRestore" hidden accept=".json" onchange="restoreBackup(this)">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- KONFIGURASI AWAL ---
+        const DB_KEY = 'SIPP_PLATINUM_V5';
+        const START_YEAR = 2025; // Logic start here
+        const defaultDB = {
+            config: { nominal: 100000, user: 'admin', pass: '123', secret: 'admin123', petugas: ['Admin','Bendahara'] },
+            santri: [],     
+            transaksi: []   
+        };
+        let myChart = null;
+
+        // --- CORE DATABASE ---
+        function getDB() { return JSON.parse(localStorage.getItem(DB_KEY) || JSON.stringify(defaultDB)); }
+        function saveDB(data) { localStorage.setItem(DB_KEY, JSON.stringify(data)); }
+        function formatRp(n) { return new Intl.NumberFormat('id-ID', {style:'currency', currency:'IDR', minimumFractionDigits:0}).format(n); }
+        
+        // --- AUTH SYSTEM ---
+        if(sessionStorage.getItem('login')) showApp();
+        
+        document.getElementById('formLogin').addEventListener('submit', e => {
+            e.preventDefault();
+            const db = getDB();
+            if(document.getElementById('uName').value === db.config.user && document.getElementById('uPass').value === db.config.pass) {
+                sessionStorage.setItem('login', true);
+                showApp();
+            } else {
+                Swal.fire({ icon: 'error', title: 'Login Gagal', text: 'Periksa username atau password Anda.' });
+            }
+        });
+
+        function lupaPass() {
+            Swal.fire({
+                title: 'Lupa Password?',
+                text: 'Masukkan KODE RAHASIA untuk melihat password.',
+                input: 'password',
+                inputPlaceholder: 'Kode Rahasia...',
+                showCancelButton: true
+            }).then(r => {
+                if(r.value) {
+                    const db = getDB();
+                    // Cek kode rahasia (default: admin123 jika belum diset)
+                    const secret = db.config.secret || 'admin123';
+                    if(r.value === secret) {
+                        Swal.fire('Password Anda', `User: <b>${db.config.user}</b><br>Pass: <b>${db.config.pass}</b>`, 'info');
+                    } else {
+                        Swal.fire('Salah!', 'Kode rahasia tidak cocok.', 'error');
+                    }
+                }
+            });
+        }
+        function logout() { sessionStorage.removeItem('login'); location.reload(); }
+
+        // --- HELPER TRANSAKSI ---
+        function getPaidAmount(santriId, month, year, db) {
+            return db.transaksi
+                .filter(t => t.idSantri === santriId && parseInt(t.month) === parseInt(month) && parseInt(t.year) === parseInt(year) && t.type === 'syahriah')
+                .reduce((sum, t) => sum + parseInt(t.nominal), 0);
+        }
+
+        // --- APP NAVIGATION ---
+        function showApp() {
+            document.getElementById('page-login').style.display = 'none';
+            document.getElementById('main-app').style.display = 'block';
+            
+            // Init Dropdowns Tahun
+            const curY = new Date().getFullYear();
+            ['payTahun','lapTahun','lapTahunFull','gridTahun'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) {
+                    el.innerHTML = '';
+                    for(let y=START_YEAR; y<=curY+1; y++) el.innerHTML += `<option value="${y}" ${y===curY?'selected':''}>${y}</option>`;
+                }
+            });
+            // Init Dropdown Bulan Laporan
+            const elBulan = document.getElementById('lapBulan');
+            elBulan.innerHTML = '';
+            ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt','Sep','Okt','Nov','Des'].forEach((b,i) => {
+                elBulan.innerHTML += `<option value="${i}" ${i===new Date().getMonth()?'selected':''}>${b}</option>`;
+            });
+
+            // Jam Digital
+            setInterval(() => {
+                const d = new Date();
+                document.getElementById('jam').innerText = d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+                document.getElementById('tanggal').innerText = d.toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'short'});
+            }, 1000);
+            
+            nav('dashboard');
+        }
+
+        function nav(page) {
+            document.querySelectorAll('.view-section').forEach(e => e.style.display = 'none');
+            document.getElementById('view-'+page).style.display = 'block';
+            document.querySelectorAll('.nav-link').forEach(e => e.classList.remove('active'));
+            event.target.closest('.nav-link').classList.add('active');
+            
+            if(page==='dashboard') loadDash();
+            if(page==='santri') renderSantri();
+            if(page==='pembayaran') renderBayar();
+            if(page==='laporan') renderGrid(); // Default tab
+            if(page==='pengaturan') loadConf();
+        }
+
+        // --- 1. DASHBOARD ---
+        function loadDash() {
+            const db = getDB();
+            const now = new Date();
+            const bln = now.getMonth();
+            const thn = now.getFullYear();
+            const namaBulan = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+
+            document.getElementById('dashPeriode').innerText = `${namaBulan[bln]} ${thn}`;
+            
+            // Hitung Santri
+            const aktif = db.santri.filter(s => s.status === 'aktif');
+            const wajib = aktif.filter(s => !s.isFree);
+            document.getElementById('dashJml').innerText = aktif.length;
+            document.getElementById('dashInfoBebas').innerText = `${aktif.filter(s=>s.isFree).length} Bebas Syahriah`;
+            
+            // Hitung Target & Realisasi
+            const target = wajib.length * db.config.nominal;
+            let masukSyahriah = 0;
+            let masukTotalCash = 0; // Termasuk tunggakan yg dibayar bulan ini
+
+            db.transaksi.forEach(t => {
+                const tDate = new Date(t.date);
+                // Cashflow bulan ini (Kapan uang diterima)
+                if(tDate.getMonth() === bln && tDate.getFullYear() === thn) {
+                    masukTotalCash += parseInt(t.nominal);
+                }
+                // Syahriah khusus alokasi bulan ini (untuk hitung piutang)
+                if(t.type === 'syahriah' && parseInt(t.month) === bln && parseInt(t.year) === thn) {
+                    masukSyahriah += parseInt(t.nominal);
+                }
+            });
+
+            document.getElementById('dashTarget').innerText = formatRp(target);
+            document.getElementById('dashMasuk').innerText = formatRp(masukTotalCash);
+            
+            const piutang = target - masukSyahriah;
+            document.getElementById('dashKurang').innerText = formatRp(piutang > 0 ? piutang : 0);
+
+            // Render Chart Tahunan
+            const ctx = document.getElementById('chartRevenue').getContext('2d');
+            const dataPerBulan = Array(12).fill(0);
+            db.transaksi.forEach(t => {
+                const d = new Date(t.date);
+                if(d.getFullYear() === thn) dataPerBulan[d.getMonth()] += parseInt(t.nominal);
+            });
+
+            if(myChart) myChart.destroy();
+            myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: namaBulan,
+                    datasets: [{ label: 'Pemasukan (Rp)', data: dataPerBulan, backgroundColor: '#0f5132', borderRadius: 4 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+
+        // --- 2. DATA SANTRI ---
+        function renderSantri() {
+            const db = getDB();
+            const key = document.getElementById('cariSantri').value.toLowerCase();
+            const tbody = document.getElementById('tblSantri');
+            tbody.innerHTML = '';
+            
+            db.santri.filter(s => s.status === 'aktif' && s.nama.toLowerCase().includes(key)).forEach((s, i) => {
+                const stt = s.isFree ? '<span class="badge bg-secondary">Bebas</span>' : '<span class="badge bg-success">Wajib</span>';
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${i+1}</td><td class="fw-bold">${s.nama}</td><td>${s.gender}</td><td>${s.kelas}</td><td>${stt}</td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-warning" onclick="modalSantri(${s.id})"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-danger" onclick="hapusSantri(${s.id})"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>`;
+            });
+        }
+        
+        function modalSantri(id=null) {
+            const db = getDB();
+            let s = {nama:'', gender:'L', kelas:'', isFree:false};
+            if(id) s = db.santri.find(x => x.id === id);
+
+            Swal.fire({
+                title: id ? 'Edit Santri' : 'Tambah Santri Baru',
+                html: `
+                    <input id="sw-nm" class="swal2-input" placeholder="Nama Lengkap" value="${s.nama}">
+                    <div class="d-flex gap-2 px-4 mt-2">
+                        <select id="sw-gn" class="swal2-input m-0"><option value="L" ${s.gender=='L'?'selected':''}>Laki-laki</option><option value="P" ${s.gender=='P'?'selected':''}>Perempuan</option></select>
+                        <input id="sw-kl" class="swal2-input m-0" placeholder="Kelas" value="${s.kelas}">
+                    </div>
+                    <div class="mt-3 text-start px-5">
+                        <input type="checkbox" id="sw-fr" ${s.isFree?'checked':''}> <label for="sw-fr">Santri Bebas Syahriah (Gratis)</label>
+                    </div>
+                `,
+                showCancelButton: true,
+                preConfirm: () => {
+                    return {
+                        nama: document.getElementById('sw-nm').value,
+                        gender: document.getElementById('sw-gn').value,
+                        kelas: document.getElementById('sw-kl').value,
+                        isFree: document.getElementById('sw-fr').checked
+                    }
+                }
+            }).then(r => {
+                if(r.isConfirmed && r.value.nama) {
+                    const db = getDB();
+                    if(id) {
+                        const idx = db.santri.findIndex(x=>x.id===id);
+                        db.santri[idx] = {...db.santri[idx], ...r.value};
+                    } else {
+                        db.santri.push({id: Date.now(), ...r.value, status:'aktif'});
+                    }
+                    saveDB(db); renderSantri(); Swal.fire('Tersimpan!','','success');
+                }
+            });
+        }
+
+        function hapusSantri(id) {
+            Swal.fire({ title: 'Hapus Data?', text: 'Data transaksi santri ini akan ikut terhapus.', icon: 'warning', showCancelButton: true, confirmButtonColor:'#d33', confirmButtonText:'Ya, Hapus' })
+            .then(r => {
+                if(r.isConfirmed) {
+                    const db = getDB();
+                    db.santri = db.santri.filter(x => x.id !== id);
+                    db.transaksi = db.transaksi.filter(x => x.idSantri !== id);
+                    saveDB(db); renderSantri(); Swal.fire('Terhapus','','success');
+                }
+            });
+        }
+
+        function importExcel() {
+            const f = document.getElementById('fileExcel').files[0];
+            if(!f) return;
+            const r = new FileReader();
+            r.onload = e => {
+                const wb = XLSX.read(e.target.result, {type:'binary'});
+                const js = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1});
+                const db = getDB();
+                js.slice(1).forEach(row => { // Skip header
+                    if(row[0]) db.santri.push({id: Date.now()+Math.random(), nama: row[0], kelas: row[1]||'-', gender:'L', isFree:false, status:'aktif'});
+                });
+                saveDB(db); renderSantri(); Swal.fire('Selesai','Data berhasil diimport','success');
+            };
+            r.readAsBinaryString(f);
+        }
+
+        // --- 3. PEMBAYARAN ---
+        function renderBayar() {
+            const db = getDB();
+            const bln = parseInt(document.getElementById('payBulan').value);
+            const thn = parseInt(document.getElementById('payTahun').value);
+            const key = document.getElementById('cariBayar').value.toLowerCase();
+            const tbody = document.getElementById('tblBayar');
+            tbody.innerHTML = '';
+
+            db.santri.filter(s => s.status === 'aktif' && s.nama.toLowerCase().includes(key)).forEach(s => {
+                let badge = '', infoHutang = '<span class="text-success small"><i class="fas fa-check"></i> Aman</span>';
+                let paid = 0, kurang = 0, btn = '';
+
+                // Cek Tunggakan (Start 2025)
+                if(thn >= START_YEAR && !s.isFree) {
+                    let nunggak = false;
+                    // Cek tahun2 lalu
+                    for(let y=START_YEAR; y<thn; y++) {
+                        for(let m=0; m<12; m++) if(getPaidAmount(s.id, m, y, db) < db.config.nominal) nunggak = true;
+                    }
+                    // Cek bulan lalu tahun ini
+                    for(let m=0; m<bln; m++) if(getPaidAmount(s.id, m, thn, db) < db.config.nominal) nunggak = true;
+                    
+                    if(nunggak) infoHutang = '<span class="badge bg-danger">Ada Tunggakan</span>';
+                }
+
+                if(s.isFree) {
+                    badge = '<span class="badge bg-secondary">GRATIS</span>';
+                    btn = '<button class="btn btn-sm btn-light" disabled>Free</button>';
+                } else {
+                    paid = getPaidAmount(s.id, bln, thn, db);
+                    kurang = db.config.nominal - paid;
+                    
+                    if(paid >= db.config.nominal) badge = '<span class="badge bg-success">LUNAS</span>';
+                    else if(paid > 0) badge = '<span class="badge bg-warning text-dark">NYICIL</span>';
+                    else badge = '<span class="badge bg-danger">BELUM</span>';
+
+                    if(kurang <= 0) btn = '<button class="btn btn-sm btn-success" disabled><i class="fas fa-check"></i></button>';
+                    else btn = `<button class="btn btn-sm btn-primary" onclick="bayar(${s.id})">Bayar</button>`;
+                }
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="fw-bold">${s.nama}</td>
+                        <td>${s.kelas}</td>
+                        <td>${infoHutang}</td>
+                        <td>${badge}</td>
+                        <td class="text-danger fw-bold">${kurang > 0 ? formatRp(kurang) : '-'}</td>
+                        <td class="text-end">${btn}</td>
+                    </tr>`;
+            });
+        }
+
+        function bayar(id) {
+            const db = getDB();
+            const s = db.santri.find(x=>x.id===id);
+            const bln = parseInt(document.getElementById('payBulan').value);
+            const thn = document.getElementById('payTahun').value;
+            const sisa = db.config.nominal - getPaidAmount(id, bln, thn, db);
+            const ptgOpts = db.config.petugas.map(p => `<option>${p}</option>`).join('');
+
+            Swal.fire({
+                title: 'Form Pembayaran',
+                html: `
+                    <div class="bg-light p-2 rounded text-start mb-2 small">
+                        <strong>${s.nama}</strong><br>Tagihan: ${document.getElementById('payBulan').options[bln].text} ${thn}
+                    </div>
+                    <label class="small w-100 text-start">Nominal Masuk</label>
+                    <input type="number" id="bx-nom" class="form-control mb-2" value="${sisa}">
+                    <label class="small w-100 text-start">Metode Pembayaran (Via)</label>
+                    <select id="bx-via" class="form-select mb-2"><option>Tunai</option><option>Transfer Bank</option><option>QRIS</option></select>
+                    <label class="small w-100 text-start">Tanggal Terima</label>
+                    <input type="date" id="bx-tgl" class="form-control mb-2" value="${new Date().toISOString().slice(0,10)}">
+                    <label class="small w-100 text-start">Penerima (Petugas)</label>
+                    <select id="bx-ptg" class="form-select">${ptgOpts}</select>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Simpan',
+                preConfirm: () => { return { nom: document.getElementById('bx-nom').value, via: document.getElementById('bx-via').value, tgl: document.getElementById('bx-tgl').value, ptg: document.getElementById('bx-ptg').value }}
+            }).then(r => {
+                if(r.isConfirmed && r.value.nom > 0) {
+                    const db = getDB();
+                    db.transaksi.push({
+                        id: Date.now(), idSantri: id, month: bln, year: thn, type:'syahriah',
+                        nominal: parseInt(r.value.nom), via: r.value.via, date: r.value.tgl, petugas: r.value.ptg
+                    });
+                    saveDB(db); renderBayar(); Swal.fire('Berhasil','','success');
+                }
+            });
+        }
+
+        // --- 4. LAPORAN (CORE FEATURE) ---
+        
+        // A. TAB MATRIKS
+        function renderGrid() {
+            const db = getDB();
+            const thn = document.getElementById('gridTahun').value;
+            const key = document.getElementById('cariGrid').value.toLowerCase();
+            const tbody = document.getElementById('tblGrid');
+            tbody.innerHTML = '';
+
+            const list = db.santri.filter(s => s.status === 'aktif' && s.nama.toLowerCase().includes(key));
+            
+            list.forEach(s => {
+                let cells = '';
+                for(let m=0; m<12; m++) {
+                    if(s.isFree) {
+                        cells += `<td><div class="grid-cell bg-free">Free</div></td>`;
+                    } else {
+                        const paid = getPaidAmount(s.id, m, thn, db);
+                        let cls = 'bg-belum', ico = '<i class="fas fa-times"></i>';
+                        if(paid >= db.config.nominal) { cls = 'bg-lunas'; ico = '<i class="fas fa-check"></i>'; }
+                        else if(paid > 0) { cls = 'bg-nyicil'; ico = formatRp(paid).replace(',00','').replace('Rp',''); } // Show partial amount
+                        cells += `<td><div class="grid-cell ${cls}">${ico}</div></td>`;
+                    }
+                }
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="text-start fw-bold ps-2">${s.nama}</td>
+                        ${cells}
+                        <td><button class="btn btn-sm btn-outline-dark py-0" onclick="cetakKartuSantri(${s.id})"><i class="fas fa-print"></i></button></td>
+                    </tr>`;
+            });
+        }
+
+        function cetakKartuSantri(id) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const db = getDB();
+            const s = db.santri.find(x => x.id === id);
+            const trxs = db.transaksi.filter(t => t.idSantri === id).sort((a,b) => new Date(a.date) - new Date(b.date));
+
+            doc.setFontSize(16); doc.text("KARTU RINCIAN PEMBAYARAN", 105, 15, {align:'center'});
+            doc.setFontSize(10); doc.text("PP At-Taufiiqiyyah Bustanul Maarif", 105, 20, {align:'center'});
+            doc.line(14, 25, 196, 25);
+
+            doc.text(`Nama: ${s.nama}`, 14, 35);
+            doc.text(`Kelas: ${s.kelas}`, 14, 40);
+            doc.text(`Status: ${s.isFree ? 'Bebas Syahriah' : 'Wajib Bayar'}`, 14, 45);
+
+            const rows = trxs.map(t => [
+                t.date,
+                t.type==='syahriah' ? `Syahriah ${parseInt(t.month)+1}/${t.year}` : 'Lainnya',
+                formatRp(t.nominal),
+                t.via,
+                t.petugas
+            ]);
+
+            doc.autoTable({
+                startY: 50,
+                head: [['Tanggal Bayar', 'Keterangan', 'Nominal', 'Via', 'Petugas']],
+                body: rows,
+                theme: 'grid',
+                headStyles: { fillColor: [15, 81, 50] }
+            });
+
+            doc.save(`Kartu_SPP_${s.nama}.pdf`);
+        }
+
+        // B. LAPORAN BULANAN
+        function cetakLaporanBulanan() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const db = getDB();
+            
+            const blnIdx = parseInt(document.getElementById('lapBulan').value);
+            const thn = parseInt(document.getElementById('lapTahun').value);
+            const namaBulan = document.getElementById('lapBulan').options[blnIdx].text;
+            
+            // Header
+            doc.setFontSize(16); doc.text("LAPORAN KEUANGAN BULANAN", 14, 15);
+            doc.setFontSize(11); doc.text(`Periode: ${namaBulan} ${thn}`, 14, 22);
+            doc.setLineWidth(0.5); doc.line(14, 28, 196, 28);
+
+            // Logic Summary
+            let totalMasuk = 0;
+            let listTunggakan = [];
+            
+            // 1. Hitung Uang Masuk (Cashflow bulan ini)
+            const trxThisMonth = db.transaksi.filter(t => {
+                const d = new Date(t.date);
+                return d.getMonth() === blnIdx && d.getFullYear() === thn;
+            });
+            trxThisMonth.forEach(t => totalMasuk += parseInt(t.nominal));
+
+            // 2. Daftar Tunggakan (Siapa yang belum lunas bulan ini)
+            const santriAktif = db.santri.filter(s => s.status === 'aktif' && !s.isFree);
+            santriAktif.forEach(s => {
+                const paid = getPaidAmount(s.id, blnIdx, thn, db);
+                const kurang = db.config.nominal - paid;
+                if(kurang > 0) {
+                    listTunggakan.push([s.nama, s.kelas, formatRp(paid), formatRp(kurang)]);
+                }
+            });
+
+            // Content PDF
+            let y = 35;
+            doc.setFontSize(12); doc.text("A. RINGKASAN KEUANGAN", 14, y);
+            y += 7; doc.setFontSize(10);
+            doc.text(`1. Total Uang Masuk Bulan Ini: ${formatRp(totalMasuk)}`, 14, y);
+            doc.text(`2. Jumlah Santri Menunggak: ${listTunggakan.length} Orang`, 14, y+5);
+            
+            y += 15;
+            doc.setFontSize(12); doc.text("B. DAFTAR SANTRI MENUNGGAK BULAN INI", 14, y);
+            
+            doc.autoTable({
+                startY: y+5,
+                head: [['Nama Santri', 'Kelas', 'Sudah Bayar', 'Kekurangan']],
+                body: listTunggakan,
+                theme: 'striped',
+                headStyles: { fillColor: [220, 53, 69] } // Merah
+            });
+
+            doc.save(`Laporan_Bulanan_${namaBulan}_${thn}.pdf`);
+        }
+
+        // C. LAPORAN TAHUNAN
+        function cetakLaporanTahunan() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const db = getDB();
+            const thn = parseInt(document.getElementById('lapTahunFull').value);
+            const namaBulan = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+
+            // Header
+            doc.setFontSize(16); doc.text("LAPORAN KEUANGAN TAHUNAN", 105, 15, {align:'center'});
+            doc.setFontSize(12); doc.text(`Tahun Anggaran: ${thn}`, 105, 22, {align:'center'});
+            doc.line(14, 28, 196, 28);
+
+            // Aggregate Data per Bulan
+            const dataTable = [];
+            let grandTotal = 0;
+
+            for(let i=0; i<12; i++) {
+                let monthlyTotal = 0;
+                db.transaksi.forEach(t => {
+                    const d = new Date(t.date);
+                    if(d.getFullYear() === thn && d.getMonth() === i) {
+                        monthlyTotal += parseInt(t.nominal);
+                    }
+                });
+                grandTotal += monthlyTotal;
+                dataTable.push([i+1, namaBulan[i], formatRp(monthlyTotal)]);
+            }
+            dataTable.push(['', 'TOTAL PENDAPATAN TAHUN INI', formatRp(grandTotal)]);
+
+            doc.autoTable({
+                startY: 35,
+                head: [['No', 'Bulan', 'Total Pemasukan (Omzet)']],
+                body: dataTable,
+                theme: 'grid',
+                headStyles: { fillColor: [15, 81, 50] },
+                columnStyles: { 2: { fontStyle: 'bold', halign: 'right' } }
+            });
+
+            // Footer Sign
+            const finalY = doc.lastAutoTable.finalY + 20;
+            doc.text("Mengetahui,", 140, finalY);
+            doc.text("Pimpinan Pondok", 140, finalY + 20);
+
+            doc.save(`Laporan_Tahunan_${thn}.pdf`);
+        }
+
+        // --- 5. CONFIG SAVE ---
+        function loadConf() {
+            const db = getDB();
+            document.getElementById('confNominal').value = db.config.nominal;
+            document.getElementById('confPetugas').value = db.config.petugas.join(', ');
+            document.getElementById('confUser').value = db.config.user;
+            document.getElementById('confPass').value = db.config.pass;
+            document.getElementById('confSecret').value = db.config.secret || '';
+        }
+        function saveConf(type) {
+            const db = getDB();
+            if(type === 'finance') {
+                db.config.nominal = parseInt(document.getElementById('confNominal').value);
+                db.config.petugas = document.getElementById('confPetugas').value.split(',').map(s=>s.trim());
+                db.config.secret = document.getElementById('confSecret').value;
+            } else {
+                db.config.user = document.getElementById('confUser').value;
+                db.config.pass = document.getElementById('confPass').value;
+            }
+            saveDB(db); Swal.fire('Tersimpan','Pengaturan berhasil diperbarui','success');
+        }
+        function downloadBackup() {
+            const a = document.createElement('a');
+            a.href = "data:text/json;charset=utf-8," + encodeURIComponent(localStorage.getItem(DB_KEY));
+            a.download = `SIPP_BACKUP_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+        }
+        function restoreBackup(el) {
+            const reader = new FileReader();
+            reader.onload = e => {
+                try {
+                    const j = JSON.parse(e.target.result);
+                    if(j.santri && j.config) { localStorage.setItem(DB_KEY, JSON.stringify(j)); location.reload(); }
+                } catch(e) { Swal.fire('Error','File backup rusak','error'); }
+            };
+            reader.readAsText(el.files[0]);
+        }
+    </script>
+</body>
+</html>
